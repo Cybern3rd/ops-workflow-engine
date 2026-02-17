@@ -1,11 +1,11 @@
-[email protected] = "ops-workflow-engine-api"
+name = "ops-workflow-engine-api"
 main = "api/worker.ts"
 compatibility_date = "2024-01-01"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "ops-db"
-database_id = "YOUR_D1_DATABASE_ID"  # Generated after: wrangler d1 create ops-db
+database_id = "eff31bc9-ceb6-4a96-9d82-4b78287882f0"
 
 [[durable_objects.bindings]]
 name = "TASK_BOARD"
@@ -14,10 +14,9 @@ script_name = "ops-workflow-engine-api"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["TaskBoardState"]
+new_sqlite_classes = ["TaskBoardState"]
 
 [vars]
-GITHUB_TOKEN = "YOUR_GITHUB_TOKEN"
 
 # Workers Routes (for production)
 [route]

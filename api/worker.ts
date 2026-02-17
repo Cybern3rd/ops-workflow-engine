@@ -1,3 +1,4 @@
+export { TaskBoardState } from "./TaskBoardState";
 // ops-workflow-engine.org API Worker
 // Cloudflare Workers + D1 Database
 
