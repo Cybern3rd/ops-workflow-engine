@@ -1,0 +1,35 @@
+---
+import Layout from '../layouts/Layout.astro';
+import KanbanBoard from '../components/KanbanBoard';
+---
+
+<Layout title="ops.workflow-engine.org - Task Dashboard">
+  <main class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <header class="border-b border-gray-700/50 backdrop-blur-lg bg-gray-900/80 sticky top-0 z-50">
+      <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <span class="text-2xl">⚡</span>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold">ops.workflow-engine.org</h1>
+            <p class="text-sm text-gray-400">Task & Project Management</p>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+          <button class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors font-medium" id="new-task-btn">
+            + New Task
+          </button>
+          <button class="p-2 rounded-lg hover:bg-gray-800 transition-colors" title="Toggle dark mode">
+            🌙
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-8">
+      <KanbanBoard client:load />
+    </div>
+  </main>
+</Layout>

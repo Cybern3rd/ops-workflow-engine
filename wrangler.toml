@@ -1,0 +1,25 @@
+[email protected] = "ops-workflow-engine-api"
+main = "api/worker.ts"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ops-db"
+database_id = "YOUR_D1_DATABASE_ID"  # Generated after: wrangler d1 create ops-db
+
+[[durable_objects.bindings]]
+name = "TASK_BOARD"
+class_name = "TaskBoardState"
+script_name = "ops-workflow-engine-api"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["TaskBoardState"]
+
+[vars]
+GITHUB_TOKEN = "YOUR_GITHUB_TOKEN"
+
+# Workers Routes (for production)
+[route]
+pattern = "api.workflow-engine.org/*"
+zone_name = "workflow-engine.org"
