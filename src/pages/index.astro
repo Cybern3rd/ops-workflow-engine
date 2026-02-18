@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import KanbanBoard from '../components/KanbanBoard';
+import TaskModal from '../components/TaskModal';
 ---
 
 <Layout title="ops.workflow-engine.org - Task Dashboard">
@@ -18,11 +19,14 @@ import KanbanBoard from '../components/KanbanBoard';
         </div>
         
         <div class="flex items-center gap-4">
+          <a href="/timeline" class="text-gray-300 hover:text-white transition-colors">
+            📅 Timeline
+          </a>
+          <a href="/activity" class="text-gray-300 hover:text-white transition-colors">
+            📊 Activity
+          </a>
           <button class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors font-medium" id="new-task-btn">
             + New Task
-          </button>
-          <button class="p-2 rounded-lg hover:bg-gray-800 transition-colors" title="Toggle dark mode">
-            🌙
           </button>
         </div>
       </div>
@@ -30,6 +34,19 @@ import KanbanBoard from '../components/KanbanBoard';
 
     <div class="container mx-auto px-4 py-8">
       <KanbanBoard client:load />
+      <TaskModal client:load />
     </div>
   </main>
+
+  <script>
+    // Task modal handling
+    document.addEventListener('DOMContentLoaded', () => {
+      const newTaskBtn = document.getElementById('new-task-btn');
+      if (newTaskBtn) {
+        newTaskBtn.addEventListener('click', () => {
+          window.dispatchEvent(new CustomEvent('open-task-modal'));
+        });
+      }
+    });
+  </script>
 </Layout>

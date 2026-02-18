@@ -16,7 +16,6 @@ script_name = "ops-workflow-engine-api"
 tag = "v1"
 new_sqlite_classes = ["TaskBoardState"]
 
-[vars]
 
 # Workers Routes (for production)
 [route]

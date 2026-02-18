@@ -278,6 +278,157 @@ async function getComments(taskId: string, env: Env): Promise<Response> {
   });
 }
 
+// POST /api/documents/upload - Upload document to GitHub
+async function uploadDocument(request: Request, env: Env, agentId: string): Promise<Response> {
+  const body = await request.json() as any;
+  const { task_id, filename, content, message } = body;
+
+  if (!task_id || !filename || !content) {
+    return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+
+  try {
+    // GitHub API: Create/update file
+    const path = `docs/${task_id}/${filename}`;
+    const githubUrl = `https://api.github.com/repos/Cybern3rd/ops-workflow-engine-docs/contents/${path}`;
+    
+    const githubResponse = await fetch(githubUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+        'Content-Type': 'application/json',
+        'User-Agent': 'ops-workflow-engine',
+      },
+      body: JSON.stringify({
+        message: message || `Upload ${filename} for task ${task_id}`,
+        content: btoa(content), // Base64 encode
+        committer: {
+          name: 'ops-workflow-engine',
+          email: 'neo_pm@agentmail.to',
+        },
+      }),
+    });
+
+    if (!githubResponse.ok) {
+      const error = await githubResponse.text();
+      throw new Error(`GitHub API error: ${error}`);
+    }
+
+    const githubData = await githubResponse.json() as any;
+    const fileUrl = githubData.content.html_url;
+
+    // Update task with attachment
+    const task = await env.DB.prepare('SELECT attachments FROM tasks WHERE id = ?').bind(task_id).first();
+    const attachments = task?.attachments ? JSON.parse(task.attachments as string) : [];
+    attachments.push({
+      filename,
+      url: fileUrl,
+      uploaded_by: agentId,
+      uploaded_at: Math.floor(Date.now() / 1000),
+    });
+
+    await env.DB.prepare(
+      'UPDATE tasks SET attachments = ?, updated_at = ? WHERE id = ?'
+    ).bind(JSON.stringify(attachments), Math.floor(Date.now() / 1000), task_id).run();
+
+    // Log activity
+    await env.DB.prepare(
+      'INSERT INTO activity (id, task_id, agent_id, action, details, timestamp) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(
+      generateId(),
+      task_id,
+      agentId,
+      'document_uploaded',
+      JSON.stringify({ filename, url: fileUrl }),
+      Math.floor(Date.now() / 1000)
+    ).run();
+
+    return new Response(JSON.stringify({ url: fileUrl, path }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}
+
+// GET /api/documents/list/:task_id - List task documents
+async function listDocuments(taskId: string, env: Env): Promise<Response> {
+  const task = await env.DB.prepare('SELECT attachments FROM tasks WHERE id = ?').bind(taskId).first();
+  
+  if (!task || !task.attachments) {
+    return new Response(JSON.stringify([]), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+
+  const attachments = JSON.parse(task.attachments as string);
+  
+  return new Response(JSON.stringify(attachments), {
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
+}
+
+// GET /api/sprints - List all sprints
+async function listSprints(env: Env): Promise<Response> {
+  const result = await env.DB.prepare('SELECT * FROM sprints ORDER BY start_date DESC').all();
+  
+  return new Response(JSON.stringify(result.results), {
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
+}
+
+// POST /api/sprints - Create sprint
+async function createSprint(request: Request, env: Env, agentId: string): Promise<Response> {
+  const body = await request.json() as any;
+  const id = generateId();
+  const now = Math.floor(Date.now() / 1000);
+
+  await env.DB.prepare(
+    'INSERT INTO sprints (id, name, start_date, end_date, status, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+  ).bind(
+    id,
+    body.name || 'Untitled Sprint',
+    body.start_date || null,
+    body.end_date || null,
+    body.status || 'planning',
+    now
+  ).run();
+
+  return new Response(JSON.stringify({ id, ...body, created_at: now }), {
+    status: 201,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
+}
+
+// PATCH /api/sprints/:id - Update sprint
+async function updateSprint(id: string, request: Request, env: Env): Promise<Response> {
+  const body = await request.json() as any;
+  const updates: string[] = [];
+  const params: any[] = [];
+
+  if (body.name !== undefined) { updates.push('name = ?'); params.push(body.name); }
+  if (body.start_date !== undefined) { updates.push('start_date = ?'); params.push(body.start_date); }
+  if (body.end_date !== undefined) { updates.push('end_date = ?'); params.push(body.end_date); }
+  if (body.status !== undefined) { updates.push('status = ?'); params.push(body.status); }
+
+  params.push(id);
+
+  await env.DB.prepare(
+    `UPDATE sprints SET ${updates.join(', ')} WHERE id = ?`
+  ).bind(...params).run();
+
+  return new Response(JSON.stringify({ success: true }), {
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
+}
+
 // Main worker handler
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -332,6 +483,35 @@ export default {
     const commentsMatch = path.match(/^\/api\/comments\/task\/([^/]+)$/);
     if (commentsMatch && request.method === 'GET') {
       return getComments(commentsMatch[1], env);
+    }
+    
+    // Documents
+    if (path === '/api/documents/upload' && request.method === 'POST') {
+      return uploadDocument(request, env, agentId);
+    }
+    
+    const docsListMatch = path.match(/^\/api\/documents\/list\/([^/]+)$/);
+    if (docsListMatch && request.method === 'GET') {
+      return listDocuments(docsListMatch[1], env);
+    }
+    
+    // Sprints
+    if (path === '/api/sprints') {
+      if (request.method === 'GET') return listSprints(env);
+      if (request.method === 'POST') return createSprint(request, env, agentId);
+    }
+    
+    const sprintMatch = path.match(/^\/api\/sprints\/([^/]+)$/);
+    if (sprintMatch && request.method === 'PATCH') {
+      return updateSprint(sprintMatch[1], request, env);
+    }
+    
+    // WebSocket
+    if (path === '/api/ws') {
+      // Upgrade to WebSocket via Durable Object
+      const doId = env.TASK_BOARD.idFromName('main-board');
+      const stub = env.TASK_BOARD.get(doId);
+      return stub.fetch(request);
     }
     
     return new Response(JSON.stringify({ error: 'Not found' }), {

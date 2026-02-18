@@ -23,6 +23,31 @@ async function request(endpoint: string, options: RequestInit = {}) {
 }
 
 export const api = {
+  // Generic methods
+  get: async <T = any>(endpoint: string): Promise<T> => {
+    return request(endpoint);
+  },
+
+  post: async <T = any>(endpoint: string, data: any): Promise<T> => {
+    return request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  patch: async <T = any>(endpoint: string, data: any): Promise<T> => {
+    return request(endpoint, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async <T = any>(endpoint: string): Promise<T> => {
+    return request(endpoint, {
+      method: 'DELETE',
+    });
+  },
+
   // Tasks
   getTasks: async (filters?: { status?: string; assigned_to?: string; sprint?: string }) => {
     const params = new URLSearchParams(filters as any);
