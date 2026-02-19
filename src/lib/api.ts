@@ -5,11 +5,15 @@ const API_BASE = import.meta.env.PUBLIC_API_URL || 'https://api.workflow-engine.
 const API_TOKEN = import.meta.env.PUBLIC_API_TOKEN || '';
 
 async function request(endpoint: string, options: RequestInit = {}) {
+  // Get agent name from localStorage if available
+  const agentName = typeof window !== 'undefined' ? localStorage.getItem('agent-name') : null;
+  
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${API_TOKEN}`,
+      ...(agentName ? { 'X-Agent-Name': agentName } : {}),
       ...options.headers,
     },
   });

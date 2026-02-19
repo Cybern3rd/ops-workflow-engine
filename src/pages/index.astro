@@ -1,7 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import KanbanBoard from '../components/KanbanBoard';
+import PlannerKanbanBoard from '../components/PlannerKanbanBoard';
 import TaskModal from '../components/TaskModal';
+import AuthModal from '../components/AuthModal';
 ---
 
 <Layout title="ops.workflow-engine.org - Task Dashboard">
@@ -28,13 +29,17 @@ import TaskModal from '../components/TaskModal';
           <button class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors font-medium" id="new-task-btn">
             + New Task
           </button>
+          <button id="user-menu-btn" class="w-10 h-10 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center font-semibold">
+            👤
+          </button>
         </div>
       </div>
     </header>
 
     <div class="container mx-auto px-4 py-8">
-      <KanbanBoard client:load />
-      <TaskModal client:load />
+      <PlannerKanbanBoard client:only="react" />
+      <TaskModal client:only="react" />
+      <AuthModal client:only="react" />
     </div>
   </main>
 
@@ -46,6 +51,14 @@ import TaskModal from '../components/TaskModal';
         newTaskBtn.addEventListener('click', () => {
           window.dispatchEvent(new CustomEvent('open-task-modal'));
         });
+      }
+      
+      // Update user menu button with name if available
+      const userMenuBtn = document.getElementById('user-menu-btn');
+      const agentName = localStorage.getItem('agent-name');
+      if (userMenuBtn && agentName) {
+        userMenuBtn.textContent = agentName.charAt(0).toUpperCase();
+        userMenuBtn.title = agentName;
       }
     });
   </script>
